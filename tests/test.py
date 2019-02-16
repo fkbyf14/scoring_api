@@ -3,8 +3,12 @@ import datetime
 import functools
 import unittest
 
+import mock
+import redis
+
 from scoring import api
 from scoring.store import Store
+from scoring import store
 
 store = Store('localhost', 6379, 0)
 
@@ -138,7 +142,104 @@ class TestSuite(unittest.TestCase):
         self.assertEqual(len(arguments["client_ids"]), len(response))
         self.assertTrue(all(v and isinstance(v, list) and all(isinstance(i, basestring) for i in v)
                         for v in response.values()))
-        #self.assertEqual(self.context.get("nclients"), len(arguments["client_ids"]))
+        self.assertEqual(self.context.get("nclients"), len(arguments["client_ids"]))
+
+    @cases([
+        {"first_name": "a1", "last_name": "b2"},
+        {"first_name": "a&", "last_name": "b?"},
+    ])
+    def test_bad_name(self, arguments):
+        request = {"account": "horns&hoofs", "login": "h&f", "method": "online_score", "arguments": arguments}
+        self.set_valid_auth(request)
+        response, code = self.get_response(request)
+        self.assertEqual(api.INVALID_REQUEST, code, arguments)
+        self.assertTrue(len(response))
+
+    @cases([
+        {"phone": [79584545712], "email": ("python@", "@")},
+        {"first_name": {"otus","o"}, "last_name": "b"},
+    ])
+    def test_bad_arguments_field(self, arguments):
+        request = {"account": "horns&hoofs", "login": "h&f", "method": "online_score", "arguments": arguments}
+        self.set_valid_auth(request)
+        response, code = self.get_response(request)
+        self.assertEqual(api.INVALID_REQUEST, code, arguments)
+        self.assertTrue(len(response))
+
+    @cases([
+        {"phone": 89584545712, "email": "python@g"},
+        {"phone": 895845457123, "email": "python@g"},
+        {"phone": 89584545712, "email": "python"}
+    ])
+    def test_bad_phone_and_email_field(self, arguments):
+        request = {"account": "horns&hoofs", "login": "h&f", "method": "online_score", "arguments": arguments}
+        self.set_valid_auth(request)
+        response, code = self.get_response(request)
+        self.assertEqual(api.INVALID_REQUEST, code, arguments)
+        self.assertTrue(len(response))
+
+    @cases([
+        {"birthday": '11.12.1999', "gender": 3},
+        {"birthday": '11.12.1999', "gender": -1},
+        {"birthday": '11.12.1909', "gender": 0}
+        ])
+    def test_bad_birthday_and_gender(self, arguments):
+        request = {"account": "horns&hoofs", "login": "h&f", "method": "online_score", "arguments": arguments}
+        self.set_valid_auth(request)
+        response, code = self.get_response(request)
+        self.assertEqual(api.INVALID_REQUEST, code, arguments)
+        self.assertTrue(len(response))
+
+    @cases([
+        {"client_ids": [1], "date": "2017.07.07"},
+        {"client_ids": [1], "date": "-07.07.2017"},
+        {"client_ids": [1], "date": "08.O8.2018"}
+    ])
+    def test_bad_date_field(self, arguments):
+        request = {"account": "horns&hoofs", "login": "h&f", "method": "online_score", "arguments": arguments}
+        self.set_valid_auth(request)
+        response, code = self.get_response(request)
+        self.assertEqual(api.INVALID_REQUEST, code, arguments)
+        self.assertTrue(len(response))
+
+    @cases([
+        {"client_ids": 1, "date": "07.07.2017"},
+        {"client_ids": ["a", "b"], "date": "07.07.2017"},
+        {"client_ids": [], "date": "07.07.2017"},
+        {"client_ids": "a", "date": "07.07.2017"}
+    ])
+    def test_bad_client_ids_field(self, arguments):
+        request = {"account": "horns&hoofs", "login": "h&f", "method": "online_score", "arguments": arguments}
+        self.set_valid_auth(request)
+        response, code = self.get_response(request)
+        self.assertEqual(api.INVALID_REQUEST, code, arguments)
+        self.assertTrue(len(response))
+
+    @cases([
+        {"first_name": "thebestname", "last_name": "fam", "phone": 79523937611, "email": "a@f",
+         "birthday": "04.06.2001", "gender": 0}
+    ])
+    @mock.patch('scoring.store.Store.cache_get', return_value=None)
+    def test_mocking_cache_get(self, arguments, cache_get):
+        request = {"account": "horns&hoofs", "login": "h&f", "method": "online_score", "arguments": arguments}
+        self.set_valid_auth(request)
+        response, code = self.get_response(request)
+        self.assertEqual(api.OK, code, arguments)
+        score = response.get("score")
+        self.assertEqual(score, 3.5)
+        self.assertEqual(sorted(self.context["has"]), sorted(arguments.keys()))
+
+    @cases([
+        {"client_ids": [1, 2], "date": "19.07.2017"},
+    ])
+    @mock.patch('scoring.store.Store.get', return_value=redis.ConnectionError)
+    def test_mocking_get(self, arguments, get):
+        request = {"account": "horns&hoofs", "login": "h&f", "method": "clients_interests", "arguments": arguments}
+        self.set_valid_auth(request)
+        response, code = self.get_response(request)
+        print response, code
+        self.assertEqual(api.INVALID_REQUEST, code, arguments)
+        self.assertTrue(len(response))
 
 
 if __name__ == "__main__":

@@ -9,11 +9,11 @@ import hashlib
 import uuid
 from optparse import OptionParser
 from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
-from application_logic import Validator, MethodRequest, \
-    get_score, ValidatorInterests, get_interests
+from application_logic import MethodRequest, \
+    get_score, get_interests, OnlineScoreRequest, ClientsInterestsRequest
 from store import Store
 
-LOGGING = ".logging/logging.txt"
+LOGGING = ".logging/logging.log"
 SALT = "Otus"
 ADMIN_LOGIN = "admin"
 ADMIN_SALT = "42"
@@ -56,11 +56,10 @@ def check_auth(request):
 def method_handler(request, ctx, store):
     response = dict()
     body_of_request = request["body"]
+    method_request = MethodRequest(body_of_request)
 
-    try:
-        method_request = MethodRequest(body_of_request)
-    except ValueError as e:
-        return e.args[0], INVALID_REQUEST
+    if not method_request.is_valid():
+        return method_request.errors, INVALID_REQUEST
 
     if not check_auth(method_request):
         return ERRORS[FORBIDDEN], FORBIDDEN
@@ -69,13 +68,12 @@ def method_handler(request, ctx, store):
 
     if method_request.is_online_score:
         try:
-            v = Validator(arguments)
-            ctx["has"] = v.not_empty_fields
-            case1 = ctx["has"].get("gender") and ctx["has"].get("birthday")
-            case2 = ctx["has"].get("first_name") and ctx["has"].get("last_name")
-            case3 = ctx["has"].get("phone") and ctx["has"].get("email")
-            if not (case1 or case2 or case3):
-                raise ValueError("Please, enter the pair value")
+            score_req = OnlineScoreRequest(arguments)
+
+            if not score_req.is_valid():
+                return score_req.errors, INVALID_REQUEST
+
+            ctx["has"] = arguments.keys()
 
             if method_request.is_admin:
                 response["score"] = int(ADMIN_SALT)
@@ -85,14 +83,20 @@ def method_handler(request, ctx, store):
 
             response, code = response, OK
         except Exception as e:
-            return e.args[0], INVALID_REQUEST
+            return e.args, INVALID_REQUEST
     if method_request.is_clients_interests:
+
         try:
-            ValidatorInterests(arguments)
+            interests_req = ClientsInterestsRequest(arguments)
+
+            if not interests_req.is_valid():
+                return interests_req.errors, INVALID_REQUEST
+
+            ctx["nclients"] = len(arguments["client_ids"])
             response = get_interests(store, arguments)
             response, code = response, OK
         except Exception as e:
-            return e.args[0], INVALID_REQUEST
+            return e.args, INVALID_REQUEST
 
     return response, code
 

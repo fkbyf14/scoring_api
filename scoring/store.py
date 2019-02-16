@@ -1,9 +1,6 @@
 import time
 
 import redis
-import json
-
-#POOL = redis.ConnectionPool(host='localhost', port=6379, db=0)
 import logging
 
 STORE_KEY = "interests"
@@ -31,7 +28,6 @@ class Store(object):
 
                 except redis.RedisError as e:
                     msg = "Cannot connect to Clients redis: %s" % e
-                    print msg  # will show up at uwsgi log
                     logging.error(msg)
                     time.sleep(1)
         else:
@@ -50,10 +46,8 @@ class Store(object):
 
     def get(self, cid):
         #self.interests_cash.ping()
-        response = ''
         try:
             response = self.interests_cash.srandmember(STORE_KEY, 2)
-            print "you are getting: ", response #str(response)
             return response
         except redis.ConnectionError as e:
             return e.args

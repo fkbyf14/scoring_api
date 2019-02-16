@@ -57,7 +57,6 @@ class ArgumentsField(Field):
             for key in args:
 
                 if not isinstance(args.get(key), (str, int, unicode, list)):
-                    print args.get(key), type(args.get(key))
                     raise ValidationError
             return True
         except Exception:
@@ -242,7 +241,6 @@ def get_score(store, arg):
     ]
 
     key = "uid:" + hashlib.md5("".join(key_parts)).hexdigest()
-    print key
     # try get from cache,
     # fallback to heavy calculation in case of cache miss
     score = store.cache_get(key) or 0
@@ -258,7 +256,6 @@ def get_score(store, arg):
         score += 0.5
     # cache for 60 minutes
     store.cache_set(key, score, 60 * 60)
-    print score, type(score)
     return score
 
 

@@ -237,7 +237,6 @@ class TestSuite(unittest.TestCase):
         request = {"account": "horns&hoofs", "login": "h&f", "method": "clients_interests", "arguments": arguments}
         self.set_valid_auth(request)
         response, code = self.get_response(request)
-        print response, code
         self.assertEqual(api.INVALID_REQUEST, code, arguments)
         self.assertTrue(len(response))
 

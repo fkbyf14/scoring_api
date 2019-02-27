@@ -1,8 +1,6 @@
+import os
 import unittest
-
-import mock as mock
-
-from scoring import api, store
+from scoring import api
 import redis
 from scoring import store
 
@@ -12,6 +10,7 @@ class TestSuite(unittest.TestCase):
         self.context = {}
         self.headers = {}
         self.store = None
+        #os.environ["REDIS_PORT"]
 
     def get_response(self, request):
         return api.method_handler({"body": request, "headers": self.headers}, self.context, self.store)
@@ -45,9 +44,6 @@ class TestSuite(unittest.TestCase):
                    "arguments": {"gender": 2, "birthday": "01.01.2000"}}
         msg = self.get_response_from_broken_port(request)
         self.assertEqual(api.INVALID_REQUEST, msg)
-
-
-
 
 
 if __name__ == "__main__":

@@ -35,22 +35,19 @@ class Store(object):
 
     def cache_get(self, key):
         response = self.score_cash.get(key)
-        print "you are getting your cache: ", str(response)
         if response:
-            return float(response)
+            return response
         return response
 
     def cache_set(self, key, data, ex_time):
-        print "you are setting:", str(data)
         self.score_cash.set(key, data, ex_time)
 
     def get(self, cid):
-        #self.interests_cash.ping()
         try:
             response = self.interests_cash.srandmember(STORE_KEY, 2)
             return response
-        except redis.ConnectionError as e:
-            return e.args
+        except redis.ConnectionError:
+            raise
 
 
 

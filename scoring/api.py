@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import abc
 import json
 import datetime
 import logging
@@ -43,11 +42,8 @@ GENDERS = {
 def check_auth(request):
     if request.is_admin:
         digest = hashlib.sha512(datetime.datetime.now().strftime("%Y%m%d%H") + ADMIN_SALT).hexdigest()
-        # ed24237f3302c9a49ad8a8ca7d25e27f77ee5a49e5ac066ce9fa38022f648af41dfe3c6a4b06908b66928a5dcb3565c6022b2c837f76769b1c96349b5e91a5b4
     else:
         digest = hashlib.sha512(str(request.account) + str(request.login) + SALT).hexdigest()
-        # 55cc9ce545bcd144300fe9efc28e65d415b923ebb6be1e19d2750a2c03e80dd209a27954dca045e5bb12418e7d89b6d718a9e35af34e14e1d5bcd5a08f21fc95
-    print digest
     if digest == str(request.token):
         return True
     return False
@@ -65,15 +61,14 @@ def method_handler(request, ctx, store):
         return ERRORS[FORBIDDEN], FORBIDDEN
 
     arguments = request["body"]["arguments"]
-
-    if method_request.is_online_score:
-        try:
+    try:
+        if method_request.is_online_score:
             score_req = OnlineScoreRequest(arguments)
 
             if not score_req.is_valid():
                 return score_req.errors, INVALID_REQUEST
 
-            ctx["has"] = arguments.keys()
+            ctx["has"] = score_req.data.keys()
 
             if method_request.is_admin:
                 response["score"] = int(ADMIN_SALT)
@@ -82,11 +77,8 @@ def method_handler(request, ctx, store):
             response["score"] = get_score(store, arguments)
 
             response, code = response, OK
-        except Exception as e:
-            return e.args, INVALID_REQUEST
-    if method_request.is_clients_interests:
 
-        try:
+        if method_request.is_clients_interests:
             interests_req = ClientsInterestsRequest(arguments)
 
             if not interests_req.is_valid():
@@ -95,8 +87,8 @@ def method_handler(request, ctx, store):
             ctx["nclients"] = len(arguments["client_ids"])
             response = get_interests(store, arguments)
             response, code = response, OK
-        except Exception as e:
-            return e.args, INVALID_REQUEST
+    except Exception as e:
+        return e.args, INVALID_REQUEST
 
     return response, code
 

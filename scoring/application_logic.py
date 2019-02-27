@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import hashlib
+from abc import abstractmethod
 from datetime import datetime
 
 ADMIN_LOGIN = "admin"
@@ -19,6 +20,10 @@ class Field(object):
         self.required = required
         self.nullable = nullable
         self.label = None
+
+    @abstractmethod
+    def validation(self):
+        pass
 
     def __get__(self, instance, owner):
         return instance.__dict__.get(self.label, None)
@@ -41,10 +46,8 @@ class CharField(Field):
         super(CharField, self).__init__(required, nullable)
 
     def validation(self, value):
-        if self.label == "first_name" or self.label == "last_name":
-            for ch in value:
-                if not ch.isalpha():
-                    raise ValidationError("Name should consist of letters")
+        if not isinstance(value, str):
+            raise ValueError("Chars field should be a string")
         return True
 
 
@@ -55,7 +58,6 @@ class ArgumentsField(Field):
     def validation(self, args):
         try:
             for key in args:
-
                 if not isinstance(args.get(key), (str, int, unicode, list)):
                     raise ValidationError
             return True
@@ -69,6 +71,9 @@ class PhoneField(Field):
 
     def validation(self, value):
         value = str(value)
+        for val in value:
+            if not val.isdigit():
+                raise ValidationError("Oops..! Phone number must consist of integers")
         if value[0] != "7":
             raise ValidationError("Oops..! International code in phone number must equal 7")
         if len(value) != 11:
@@ -86,13 +91,25 @@ class EmailField(CharField):
         return True
 
 
+class NameField(CharField):
+    def __init__(self, required, nullable):
+        super(NameField, self).__init__(required, nullable)
+
+    def validation(self, value):
+        for ch in value:
+            if not ch.isalpha():
+                raise ValidationError("Oops..! Email must contain the @ character")
+        return True
+
+
 class BirthDayField(Field):
     def __init__(self, required, nullable):
         super(BirthDayField, self).__init__(required, nullable)
 
     def validation(self, value):
         delta = datetime.now() - datetime.strptime(value, "%d.%m.%Y")
-        if delta.days > 365 * 70:
+        days_in_70_years = (70 // 4) * 366 + (70 - 70 // 4) * 365
+        if delta.days > days_in_70_years:
             raise ValidationError("Oops..! The age should not exceed 70")
         return True
 
@@ -147,7 +164,7 @@ class DeclarativeRequestsMetaclass(type):
         # find all requests, auto-set their labels
         for key, value in attribute_dict.items():
             if isinstance(value, Field):
-                declared_fields.append((key, value))
+                declared_fields.append(key)
                 value.label = key
         new_class = super(DeclarativeRequestsMetaclass, mcs).__new__(mcs, name, bases, attribute_dict)
         new_class.declared_fields = declared_fields
@@ -161,7 +178,7 @@ class BaseRequest(object):
     def __init__(self, data=None):
         self.data = data or {}
         self.errors = {}
-        for name, _ in self.declared_fields:
+        for name in self.declared_fields:
             value = self.data.get(name)
 
             try:
@@ -197,8 +214,8 @@ class MethodRequest(BaseRequest):
 
 
 class OnlineScoreRequest(BaseRequest):
-    first_name = CharField(required=False, nullable=True)
-    last_name = CharField(required=False, nullable=True)
+    first_name = NameField(required=False, nullable=True)
+    last_name = NameField(required=False, nullable=True)
     email = EmailField(required=False, nullable=True)
     phone = PhoneField(required=False, nullable=True)
     birthday = BirthDayField(required=False, nullable=True)

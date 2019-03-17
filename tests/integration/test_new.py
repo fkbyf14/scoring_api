@@ -19,10 +19,6 @@ class TestSuite(unittest.TestCase):
         _, code = self.get_response({})
         self.assertEqual(api.INVALID_REQUEST, code)
 
-    def test_broken_port(self):
-        self.pool = redis.ConnectionPool(port=0)
-        self.assertRaises(redis.ConnectionError)
-
     def test_get_nil_value(self):
         self.pool = redis.ConnectionPool(port=6379)
         cache = redis.StrictRedis(connection_pool=self.pool)

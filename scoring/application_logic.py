@@ -22,8 +22,11 @@ class Field(object):
         self.label = None
 
     @abstractmethod
-    def validation(self):
+    def validation(self, value):
         pass
+
+    def is_empty(self, value):
+        return not bool(value)
 
     def __get__(self, instance, owner):
         return instance.__dict__.get(self.label, None)
@@ -32,7 +35,7 @@ class Field(object):
 
         if value is None and self.required:
             raise ValidationError("\'{}\' is required field".format(self.label))
-        if not value and not self.nullable:
+        if self.is_empty(value) and not self.nullable:
             raise ValidationError("\'{}\'-field can't be empty".format(self.label))
         if value is not None and self.validation(value):
             instance.__dict__[self.label] = value
@@ -46,8 +49,8 @@ class CharField(Field):
         super(CharField, self).__init__(required, nullable)
 
     def validation(self, value):
-        if not isinstance(value, str):
-            raise ValueError("Chars field should be a string")
+        if not isinstance(value, (str, unicode)):
+            raise ValidationError("Chars field should be a string")
         return True
 
 
@@ -98,7 +101,7 @@ class NameField(CharField):
     def validation(self, value):
         for ch in value:
             if not ch.isalpha():
-                raise ValidationError("Oops..! Email must contain the @ character")
+                raise ValidationError("Oops..! Name must consist only of letters")
         return True
 
 
@@ -117,6 +120,9 @@ class BirthDayField(Field):
 class GenderField(Field):
     def __init__(self, required, nullable):
         super(GenderField, self).__init__(required, nullable)
+
+    def is_empty(self, value):
+        return False if value == "" else True
 
     def validation(self, value):
         if value not in (0, 1, 2):
@@ -138,16 +144,6 @@ class ClientIDsField(Field):
         super(ClientIDsField, self).__init__(required, nullable)
         self.offset = 0
 
-    def next(self, value):
-        if self.offset >= len(value):
-            raise StopIteration
-        else:
-            item = value[self.offset]
-            self.offset += 1
-            return item
-
-    def __iter__(self):
-        return self
 
     def validation(self, value):
         if not isinstance(value, list):
@@ -203,14 +199,6 @@ class MethodRequest(BaseRequest):
     @property
     def is_admin(self):
         return self.login == ADMIN_LOGIN
-
-    @property
-    def is_online_score(self):
-        return self.method == ONLINE_SCORE
-
-    @property
-    def is_clients_interests(self):
-        return self.method == CLIENTS_INTERESTS
 
 
 class OnlineScoreRequest(BaseRequest):

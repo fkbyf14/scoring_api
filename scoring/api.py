@@ -101,7 +101,7 @@ class MainHTTPHandler(BaseHTTPRequestHandler):
         "online_score": method_handler,
         "clients_interests": method_handler
     }
-    store = Store('localhost', 6379, 0)
+    store = Store()
 
     def get_request_id(self, headers):
         return headers.get('HTTP_X_REQUEST_ID', uuid.uuid4().hex)

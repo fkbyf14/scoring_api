@@ -8,8 +8,8 @@ STORE_KEY = "interests"
 
 class Store(object):
 
-    def __init__(self, host, port, db):
-        self.host = host
+    def __init__(self, cache_server='localhost', port=6379, db_server='localhost'):
+        self.host = cache_server
         self.port = port
         self.connection = []
         self.connection = self.get_conn()
@@ -40,7 +40,7 @@ class Store(object):
     def cache_set(self, key, data, ex_time):
         self.score_cash.set(key, data, ex_time)
 
-    def get(self, cid):
+    def get(self, key):
         try:
             response = self.interests_cash.srandmember(STORE_KEY, 2)
             return response

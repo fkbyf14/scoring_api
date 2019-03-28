@@ -144,7 +144,6 @@ class ClientIDsField(Field):
         super(ClientIDsField, self).__init__(required, nullable)
         self.offset = 0
 
-
     def validation(self, value):
         if not isinstance(value, list):
             raise ValidationError("Oops! Clients ids need to be in array")
@@ -259,8 +258,7 @@ def get_score(store, arg):
         score += 1.5
     if first_name and last_name:
         score += 0.5
-    # cache for 60 minutes
-    store.cache_set(key, score, 60 * 60)
+    store.cache_set(key, score, 60)
     return score
 
 

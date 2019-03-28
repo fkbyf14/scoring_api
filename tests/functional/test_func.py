@@ -1,7 +1,6 @@
 import hashlib
 import datetime
 import unittest
-
 import mock
 import redis
 from tests import cases
@@ -21,7 +20,8 @@ class TestSuite(unittest.TestCase):
     def get_response(self, request):
         return api.method_handler({"body": request, "headers": self.headers}, self.context, self.settings)
 
-    def set_valid_auth(self, request):
+    @staticmethod
+    def set_valid_auth(request):
         if request.get("login") == api.ADMIN_LOGIN:
             request["token"] = hashlib.sha512(datetime.datetime.now().strftime("%Y%m%d%H") + api.ADMIN_SALT).hexdigest()
         else:
@@ -156,111 +156,6 @@ class TestSuite(unittest.TestCase):
         response, code = self.get_response(request)
         self.assertEqual(api.INVALID_REQUEST, code, arguments)
         self.assertTrue(len(response))
-
-
-class TestNameField(TestSuite):
-    @cases([
-        {"first_name": "a1", "last_name": "b2"},
-        {"first_name": "a&", "last_name": "b?"},
-    ])
-    def test_bad_name(self, arguments):
-        request = {"account": "horns&hoofs", "login": "h&f", "method": "online_score", "arguments": arguments}
-        self.set_valid_auth(request)
-        response, code = self.get_response(request)
-        self.assertEqual(api.INVALID_REQUEST, code, arguments)
-        self.assertTrue(len(response))
-
-"""
-class TestCharField(unittest.TestCase):
-
-    @cases([
-        -1, 0, b'', [], {}
-    ])
-    def test_invalid_char_field(self, value):
-        char_field = application_logic.CharField(required=False, nullable=True)
-        with self.assertRaises(application_logic.ValidationError):
-            char_field.validation(value)
-
-    @cases([
-        '', 'None', 'null', '0', '{}', '[]'
-    ])
-    def test_valid_char_field(self, value):
-        char_field = application_logic.CharField(required=False, nullable=True)
-        try:
-            char_field.validation(value)
-        except application_logic.ValidationError:
-            pass
-"""
-
-class TestArgumentsField(TestSuite):
-    @cases([
-        {"phone": [79584545712], "email": ("python@", "@")},
-        {"first_name": {"otus","o"}, "last_name": "b"},
-    ])
-    def test_bad_arguments_field(self, arguments):
-        request = {"account": "horns&hoofs", "login": "h&f", "method": "online_score", "arguments": arguments}
-        self.set_valid_auth(request)
-        response, code = self.get_response(request)
-        self.assertEqual(api.INVALID_REQUEST, code, arguments)
-        self.assertTrue(len(response))
-
-
-class TestPhoneAndEmailField(TestSuite):
-    @cases([
-        {"phone": 89584545712, "email": "python@g"},
-        {"phone": 895845457123, "email": "python@g"},
-        {"phone": 89584545712, "email": "python"}
-    ])
-    def test_bad_phone_and_email_field(self, arguments):
-        request = {"account": "horns&hoofs", "login": "h&f", "method": "online_score", "arguments": arguments}
-        self.set_valid_auth(request)
-        response, code = self.get_response(request)
-        self.assertEqual(api.INVALID_REQUEST, code, arguments)
-        self.assertTrue(len(response))
-
-
-class TestBirthdayAndGenderField(TestSuite):
-    @cases([
-        {"birthday": '11.12.1999', "gender": 3},
-        {"birthday": '11.12.1999', "gender": -1},
-        {"birthday": '11.12.1909', "gender": 0}
-    ])
-    def test_bad_birthday_and_gender(self, arguments):
-        request = {"account": "horns&hoofs", "login": "h&f", "method": "online_score", "arguments": arguments}
-        self.set_valid_auth(request)
-        response, code = self.get_response(request)
-        self.assertEqual(api.INVALID_REQUEST, code, arguments)
-        self.assertTrue(len(response))
-
-
-class TestDateField(TestSuite):
-    @cases([
-        {"client_ids": [1], "date": "2017.07.07"},
-        {"client_ids": [1], "date": "-07.07.2017"},
-        {"client_ids": [1], "date": "08.O8.2018"}
-    ])
-    def test_bad_date_field(self, arguments):
-        request = {"account": "horns&hoofs", "login": "h&f", "method": "online_score", "arguments": arguments}
-        self.set_valid_auth(request)
-        response, code = self.get_response(request)
-        self.assertEqual(api.INVALID_REQUEST, code, arguments)
-        self.assertTrue(len(response))
-
-
-class TestClientsIdsField(TestSuite):
-    @cases([
-        {"client_ids": 1, "date": "07.07.2017"},
-        {"client_ids": ["a", "b"], "date": "07.07.2017"},
-        {"client_ids": [], "date": "07.07.2017"},
-        {"client_ids": "a", "date": "07.07.2017"}
-    ])
-    def test_bad_client_ids_field(self, arguments):
-        request = {"account": "horns&hoofs", "login": "h&f", "method": "online_score", "arguments": arguments}
-        self.set_valid_auth(request)
-        response, code = self.get_response(request)
-        self.assertEqual(api.INVALID_REQUEST, code, arguments)
-        self.assertTrue(len(response))
-
 
     @cases([
         {"first_name": "thebestname", "last_name": "fam", "phone": 79523937611, "email": "a@f",
